@@ -1,0 +1,94 @@
+clear
+
+AS_monks = {'SON', 'TRI', 'VIK'};
+ODR_monks = {'OLI', 'PIC', 'ROS', 'UNI'};
+monks = {'OLI', 'PIC', 'ROS', 'SON', 'TRI', 'UNI', 'VIK'};
+all_timepoints = {...
+    {[23 1], [34 2], [47 3], [66 4]}...
+    {[15 1], [30 2], [52 3], [68 4]}...
+    {[30 1], [46 2], [70 3], [85 4]}...
+    {[37 1], [42 2], [53 3], [72 4]}...
+    {[38 1], [61 3], [75 4]}...
+    {[24 1], [38 2], [53 3], [74 4]}...
+    {[33 1], [50 2], [66 4]}...
+    };
+
+odr_ttest = 'K:\dataanalysis\Scripts\Neural_Data_Genesis\TemplateTTest_ODR.xlsx';
+as_ttest = 'K:\dataanalysis\Scripts\Neural_Data_Genesis\TemplateTTest_AS.xlsx';
+dist_ttest = 'K:\dataanalysis\Scripts\Neural_Data_Genesis\TemplateTTest_ODRdist.xlsx';
+
+O = 2;
+A = 2;
+D = 2;
+
+path = '\\nba-331m86\backuphdd\DevProjectBackup\Dev_Project_DAQ\NeuronData\';
+cd(path);
+filename = dir;
+filename = {filename.name};
+filename = filename(3:end);
+
+
+for i = 1:length(filename)
+    if length(filename{i}) == 18 && ismember(filename{i}(1:3), monks)
+        task = filename{i}(8);
+        task_num = str2double(task);
+        monk = filename{i}(1:3);
+        file_num = str2double(filename{i}(4:6));
+        neuron_num = str2double(filename{i}(10:14));
+        APM_filename = filename{i}(1:8);
+        idx = find(contains(monks, monk));
+        timepoint = 0;    
+        for j = 1:length(all_timepoints{idx})
+            if file_num <= all_timepoints{idx}{j}(1)
+                timepoint = all_timepoints{idx}{j}(2);
+            end
+        end      
+        switch task_num
+            case 1
+                [ttest_result1, ttest_result2, ttest_result3, cue_p, delay_p, saccade_p]...
+                    = Neuron_Data_Ttest_ODR([path filename{i}]);
+                cue = cell(1, length(ttest_result1) + 3);
+                cue(1:3) = {APM_filename, num2str(neuron_num), num2str(timepoint)};
+                delay = cue;
+                saccade = cue;
+                for k = 4:length(cue)
+                    cue(k) = {num2str(ttest_result1(k-3))};
+                    delay(k) = {num2str(ttest_result2(k-3))};
+                    saccade(k) = {num2str(ttest_result3(k-3))};
+                end
+                xlswrite(odr_ttest, cue, 'Cue', ['A' num2str(O)])
+                xlswrite(odr_ttest, delay, 'Delay', ['A' num2str(O)])
+                xlswrite(odr_ttest, saccade, 'Saccade', ['A' num2str(O)])
+                O = O + 1;
+            case 2
+                task_check = ismember(monk, ODR_monks);
+                switch task_check
+                    case 1
+                        [ttest_result1, ttest_result2, ttest_result3, cue_p, delay_p, saccade_p]...
+                            = Neuron_Data_Ttest_ODR([path filename{i}]);
+                        cue = cell(1, length(ttest_result1) + 3);
+                        cue(1:3) = {APM_filename, num2str(neuron_num), num2str(timepoint)};
+                        delay = cue;
+                        saccade = cue;
+                        for k = 4:length(cue)
+                            cue(k) = {num2str(ttest_result1(k-3))};
+                            delay(k) = {num2str(ttest_result2(k-3))};
+                            saccade(k) = {num2str(ttest_result3(k-3))};
+                        end
+                        xlswrite(dist_ttest, cue, 'Cue', ['A' num2str(D)])
+                        xlswrite(dist_ttest, delay, 'Delay', ['A' num2str(D)])
+                        xlswrite(dist_ttest, saccade, 'Saccade', ['A' num2str(D)])
+                        D = D + 1;
+                    case 0
+                        [ttest_result1, cue_p] = Neuron_Data_Ttest_AS([path filename{i}]);
+                        cue = cell(1, length(ttest_result1) + 3);
+                        cue(1:3) = {APM_filename, num2str(neuron_num), num2str(timepoint)};
+                        for k = 4:length(cue)
+                            cue(k) = {num2str(ttest_result1(k-3))};
+                        end
+                        xlswrite(as_ttest, cue, 'Cue', ['A' num2str(A)])
+                        A = A + 1;
+                end
+        end
+    end
+end
